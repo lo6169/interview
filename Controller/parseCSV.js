@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", function () {
   // Function to load and parse the CSV file
   function loadAndParseCSV() {
@@ -76,11 +75,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function viewFile(path) {
     path = convertBackslashesToForwardSlashes(path);
-    // Ensure path starts with a slash
-    if (!path.startsWith(".")) {
-        path = "./" + path.trim();
-    }
-    console.log("PATH " + path)
+    path = "./Model/" + path;
+    path = removeSpaces(path);
 
     // Open a new window and load the PDF file in an iframe
     const newWindow = window.open();
@@ -89,6 +85,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function convertBackslashesToForwardSlashes(path) {
     return path.replace(/\\/g, "/");
+  }
+
+  function removeSpaces(path) {
+    return path.replace(" ", "")
   }
 });
 
