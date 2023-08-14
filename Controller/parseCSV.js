@@ -1,94 +1,173 @@
-document.addEventListener("DOMContentLoaded", function () {
-  // Function to load and parse the CSV file
-  function loadAndParseCSV() {
-      const filePath = '../Model/Documents.csv'; // Path to the CSV file relative to parseCSV.js
+function loadAndParseCSV() {
+    const filePath = './Model/Documents.csv';
 
-      return fetch(filePath)
-          .then(response => response.text())
-          .then(contents => {
-              const lines = contents.split('\n');
-              let parsedData = '';
+    return fetch(filePath)
+        .then(response => response.text())
+        .then(contents => {
+            const lines = contents.split('\n');
+            const parsedData = [];
 
-              for (let i = 0; i < lines.length; i++) {
-                  const cells = lines[i].split(',');
+            for (let i = 1; i < lines.length; i++) {
+                const cells = lines[i].split(',');
 
-                  if (cells.length === 3) { // Make sure there are three columns: name, path, category
-                      const name = cells[0].trim();
-                      const path = cells[1].trim();
-                      const category = cells[2].trim();
+                if (cells.length === 3) {
+                    const name = cells[0].trim();
+                    const path = cells[1].trim();
+                    const category = cells[2].trim();
 
-                      parsedData += `${name}, ${path}, ${category}\n`;
-                  }
-              }
+                    parsedData.push({ name, path, category });
+                }
+            }
 
-              return parsedData;
-          })
-          .catch(error => {
-              console.error('Error loading or parsing CSV file:', error);
-              return ''; // Return empty data on error
-          });
-  }
+            return parsedData;
+        })
+        .catch(error => {
+            console.error('Error loading or parsing CSV file:', error);
+            return []; 
+        });
+}
 
-  const fileTable = document.getElementById("fileTable").getElementsByTagName("tbody")[0];
+document.addEventListener("DOMContentLoaded", async function () {
+    const fileTable = document.getElementById("fileTable").getElementsByTagName("tbody")[0];
+    const newDocumentInput = document.getElementById("newDocumentInput");
+    const uploadButton = document.getElementById("uploadButton");
 
-  // Load and parse the CSV data and populate the table
-  loadAndParseCSV().then(csvData => {
-      const rows = csvData.split("\n");
-      for (let i = 1; i < rows.length; i++) {
-          const [name, path, category] = rows[i].split(",");
-          const newRow = fileTable.insertRow();
+    uploadButton.addEventListener("click", handleDocumentUpload);
 
-          const nameCell = newRow.insertCell(0);
-          nameCell.textContent = name;
+    const csvData = await loadAndParseCSV();
 
-          const pathCell = newRow.insertCell(1);
-          pathCell.textContent = path;
+    for (const item of csvData) {
+        const newRow = fileTable.insertRow();
 
-          const categoryCell = newRow.insertCell(2);
-          categoryCell.textContent = category;
+        const nameCell = newRow.insertCell(0);
+        nameCell.textContent = item.name;
 
-          const actionsCell = newRow.insertCell(3);
-          const viewButton = document.createElement("button");
-          viewButton.textContent = "View";
-          viewButton.addEventListener("click", () => {
-              viewFile(path);
-              console.log(`Viewing ${name}`);
-          });
-          const editButton = document.createElement("button");
-          editButton.textContent = "Edit";
-          editButton.addEventListener("click", () => {
-              // Handle edit action
-              console.log(`Editing ${name}`);
-          });
-          const deleteButton = document.createElement("button");
-          deleteButton.textContent = "Delete";
-          deleteButton.addEventListener("click", () => {
-              // Handle delete action
-              console.log(`Deleting ${name}`);
-          });
+        const pathCell = newRow.insertCell(1);
+        pathCell.textContent = item.path;
 
-          actionsCell.appendChild(viewButton);
-          actionsCell.appendChild(editButton);
-          actionsCell.appendChild(deleteButton);
-      }
-  });
+        const categoryCell = newRow.insertCell(2);
+        categoryCell.textContent = item.category;
 
-  function viewFile(path) {
-    path = convertBackslashesToForwardSlashes(path);
-    path = "./Model/" + path;
-    path = removeSpaces(path);
+        const actionsCell = newRow.insertCell(3);
+        const viewButton = document.createElement("button");
+        viewButton.textContent = "View";
+        viewButton.addEventListener("click", () => {
+            viewFile(item.path);
+        });
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.addEventListener("click", () => {
+            deleteFile(item)
+            console.log(`Deleting ${item.name}`);
+        });
 
-    // Open a new window and load the PDF file in an iframe
-    const newWindow = window.open();
-    newWindow.document.write(`<iframe src="${path}" width="100%" height="600"></iframe>`);
-  }
+        actionsCell.appendChild(viewButton);
+        actionsCell.appendChild(deleteButton);
+    }
 
-  function convertBackslashesToForwardSlashes(path) {
-    return path.replace(/\\/g, "/");
-  }
+    async function deleteFile(item) {
+        const confirmed = confirm(`Are you sure you want to delete ${item.name}?`);
+        if (!confirmed) {
+            return;
+        }
+    
+        // Here's where I would actually delete the 
+        const deleteIndex = csvData.findIndex(dataItem => dataItem.name === item.name);
+        if (deleteIndex !== -1) {
+            csvData.splice(deleteIndex, 1);
+            await updateCSVFile();
+            refreshTable();
+        }
+    }
+    
+    async function updateCSVFile() {
+        const csvContent = csvData.map(item => `${item.name},${item.path},${item.category}`).join('\n');
+        const filePath = './Model/Documents.csv'; 
+    
+        try {
+            const response = await fetch(filePath, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'text/plain'
+                },
+                body: csvContent
+            });
+    
+            if (!response.ok) {
+                console.error('Error updating CSV file:', response.status, response.statusText);
+            }
+        } catch (error) {
+            console.error('Error updating CSV file:', error);
+        }
+    }
 
-  function removeSpaces(path) {
-    return path.replace(" ", "")
-  }
+    function viewFile(path) {
+        path = convertBackslashesToForwardSlashes(path);
+        if (!path.startsWith("/")) {
+            path = "./Model/" + path;
+        } else {
+            path = "./Model" + path
+        }
+        path = removeSpaces(path);
+
+        const newWindow = window.open();
+        newWindow.document.write(`<iframe src="${path}" width="100%" height="600"></iframe>`);
+    }
+
+    function convertBackslashesToForwardSlashes(path) {
+        return path.replace(/\\/g, "/");
+    }
+
+    function removeSpaces(path) {
+        return path.replace(/ /g, "");
+    }
+
+    async function handleDocumentUpload() {
+        const newDocumentFile = newDocumentInput.files[0];
+        if (newDocumentFile) {
+            // Here's where I would handle actually uploading the document
+            const newDocumentDetails = {
+                name: newDocumentFile.name,
+                path: `/Docs/NewFolder/${newDocumentFile.name}`,
+                category: "New Category"
+            };
+
+            csvData.push(newDocumentDetails);
+            refreshTable();
+        }
+    }
+
+    function refreshTable() {
+        while (fileTable.firstChild) {
+            fileTable.removeChild(fileTable.firstChild);
+        }
+        for (const item of csvData) {
+            const newRow = fileTable.insertRow();
+    
+            const nameCell = newRow.insertCell(0);
+            nameCell.textContent = item.name;
+    
+            const pathCell = newRow.insertCell(1);
+            pathCell.textContent = item.path;
+    
+            const categoryCell = newRow.insertCell(2);
+            categoryCell.textContent = item.category;
+    
+            const actionsCell = newRow.insertCell(3);
+            const viewButton = document.createElement("button");
+            viewButton.textContent = "View";
+            viewButton.addEventListener("click", () => {
+                viewFile(item.path);
+            });
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Delete";
+            deleteButton.addEventListener("click", () => {
+                deleteFile(item)
+                console.log(`Deleting ${item.name}`);
+            });
+    
+            actionsCell.appendChild(viewButton);
+            actionsCell.appendChild(deleteButton);
+        }
+    }
 });
-
