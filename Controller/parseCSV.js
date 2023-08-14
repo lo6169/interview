@@ -1,3 +1,4 @@
+
 document.addEventListener("DOMContentLoaded", function () {
   // Function to load and parse the CSV file
   function loadAndParseCSV() {
@@ -74,14 +75,20 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   function viewFile(path) {
+    path = convertBackslashesToForwardSlashes(path);
     // Ensure path starts with a slash
-    if (!path.startsWith("\\")) {
-        path = "\\" + path.trim();
-        console.log("xxxxx" + path)
+    if (!path.startsWith(".")) {
+        path = "./" + path.trim();
     }
+    console.log("PATH " + path)
 
     // Open a new window and load the PDF file in an iframe
     const newWindow = window.open();
     newWindow.document.write(`<iframe src="${path}" width="100%" height="600"></iframe>`);
   }
+
+  function convertBackslashesToForwardSlashes(path) {
+    return path.replace(/\\/g, "/");
+  }
 });
+
